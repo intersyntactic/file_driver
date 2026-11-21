@@ -12,11 +12,7 @@ environment:
 dependencies:
   is_effects: ^0.12.0
   is_path_confinement: ^0.1.0
-  # Not on pub.dev yet; ^0.1.0 from pub.dev once it is.
-  is_unix_socket_user_check:
-    git:
-      url: https://github.com/intersyntactic/unix_socket_user_check
-      ref: first-release
+  is_unix_socket_user_check: ^0.1.0
 
 dev_dependencies:
   lints: ^6.1.0
