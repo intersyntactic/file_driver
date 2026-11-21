@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'package:is_effects/is_effects.dart';
 import 'package:is_path_confinement/is_path_confinement.dart';
+import 'package:is_peer_user_admission/is_peer_user_admission.dart';
 
 import 'request.dart';
 
@@ -29,7 +30,7 @@ final class FileDriver {
   FileDriver._(
     this.root,
     this.maxBytes,
-    this._caller,
+    this._admission,
     this._socket,
     this._server,
   );
@@ -40,7 +41,7 @@ final class FileDriver {
   /// byte is recorded.
   final int maxBytes;
 
-  final int _caller;
+  final PeerUserAdmission _admission;
   final File _socket;
   final ServerSocket _server;
 
@@ -53,12 +54,14 @@ final class FileDriver {
   /// Listens on [socket] for the user [caller] alone, reading and writing
   /// under [root]. The socket is made readable and writable by its group,
   /// the suit's own, which is how the airlock's user reaches it; a socket
-  /// file nothing listens on is replaced.
+  /// file nothing listens on is replaced. [reader] reads each peer's user
+  /// from the kernel, the running kernel's by default.
   static Future<FileDriver> start({
     required Directory root,
-    required int caller,
+    required UserId caller,
     required File socket,
     int maxBytes = defaultMaxBytes,
+    PeerUserReader? reader,
   }) async {
     final server = await _bind(socket);
     final chmod = await Process.run('chmod', ['0660', socket.path]);
@@ -66,7 +69,13 @@ final class FileDriver {
       await server.close();
       throw FileSystemException('chmod 0660: ${chmod.stderr}', socket.path);
     }
-    final driver = FileDriver._(root, maxBytes, caller, socket, server);
+    final driver = FileDriver._(
+      root,
+      maxBytes,
+      PeerUserAdmission.only(caller, reader: reader),
+      socket,
+      server,
+    );
     driver._server.listen(driver._serve);
     return driver;
   }
@@ -93,12 +102,11 @@ final class FileDriver {
   }
 
   Future<void> _serve(Socket socket) async {
-    final uid = _peerUid(socket);
+    if (!_admission.admits(socket)) {
+      socket.destroy();
+      return;
+    }
     try {
-      if (uid != _caller) {
-        socket.destroy();
-        return;
-      }
       final request = BytesBuilder(copy: false);
       var tooLarge = false;
       await for (final chunk in socket) {
@@ -236,23 +244,4 @@ final class FileDriver {
 
   static String _failed(RelativePath path, FileSystemException e) =>
       '$path: ${e.osError?.message ?? e.message}';
-}
-
-/// The user on the other end of [socket], as the kernel reports it: Linux's
-/// `SO_PEERCRED`, macOS's `LOCAL_PEERCRED`. Null where neither is known.
-/// The same as is_program_driver's `ProgramDriver` reads its own.
-int? _peerUid(Socket socket) {
-  try {
-    if (Platform.isLinux) {
-      final ucred = socket.getRawOption(RawSocketOption(1, 17, Uint8List(12)));
-      return ByteData.sublistView(ucred).getUint32(4, Endian.host);
-    }
-    if (Platform.isMacOS) {
-      final xucred = socket.getRawOption(RawSocketOption(0, 1, Uint8List(76)));
-      return ByteData.sublistView(xucred).getUint32(4, Endian.host);
-    }
-  } on SocketException {
-    return null;
-  }
-  return null;
 }

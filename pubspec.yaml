@@ -12,6 +12,11 @@ environment:
 dependencies:
   is_effects: ^0.12.0
   is_path_confinement: ^0.1.0
+  # Not on pub.dev yet; ^0.1.0 from pub.dev once it is.
+  is_peer_user_admission:
+    git:
+      url: https://github.com/intersyntactic/peer_user_admission
+      ref: first-release
 
 dev_dependencies:
   lints: ^6.1.0

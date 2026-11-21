@@ -4,9 +4,11 @@ import 'dart:typed_data';
 
 import 'package:is_effects/is_effects.dart';
 import 'package:is_file_driver/is_file_driver.dart';
+import 'package:is_peer_user_admission/is_peer_user_admission.dart';
 import 'package:test/test.dart';
 
-final me = int.parse((Process.runSync('id', ['-u']).stdout as String).trim());
+final uid = int.parse((Process.runSync('id', ['-u']).stdout as String).trim());
+final me = UserId.parse(uid)!;
 
 void main() {
   late Directory base;
@@ -287,7 +289,7 @@ void main() {
       expect(why, isNot(contains('UTF-8')));
     },
     // Root can open any file, so there is nothing to refuse.
-    skip: me == 0,
+    skip: uid == 0,
   );
 
   group('the socket', () {
@@ -328,13 +330,29 @@ void main() {
       final other = File('${base.path}/t');
       final driver = await FileDriver.start(
         root: root,
-        caller: me + 1,
+        caller: UserId.parse(uid + 1)!,
         socket: other,
       );
       addTearDown(driver.close);
       // From the caller's side a hang-up after the request is sent is a
       // write whose outcome never came back, which it cannot tell from a
       // refusal.
+      await expectLater(
+        FileDriverSocket(other).write(FileText(RelativePath('a'), 'x')),
+        throwsA(isA<OutcomeUnknown>()),
+      );
+      expect(File('${root.path}/a').existsSync(), isFalse);
+    });
+
+    test('answers no peer whose user the kernel cannot name', () async {
+      final other = File('${base.path}/u');
+      final driver = await FileDriver.start(
+        root: root,
+        caller: me,
+        socket: other,
+        reader: PeerUserReader(kernel: Kernel.other),
+      );
+      addTearDown(driver.close);
       await expectLater(
         FileDriverSocket(other).write(FileText(RelativePath('a'), 'x')),
         throwsA(isA<OutcomeUnknown>()),
