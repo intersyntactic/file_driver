@@ -35,9 +35,9 @@ is_effects:
 - the caller sends one of `{"kind": "read", "path": ...}`,
   `{"kind": "readBytes", "path": ...}` or
   `{"kind": "write", "file": encodeFileText(...)}`, and closes its side;
-- the service answers one line, `encodeOutcome` of the result, and closes.
+- `FileDriver` answers one line, `encodeOutcome` of the result, and closes.
 
-`SocketFileDriver` is that caller, for the airlock.
+`FileDriverSocket` is that caller, the airlock's side of the socket.
 
 ## Running it
 
