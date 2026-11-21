@@ -18,6 +18,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:is_file_driver/is_file_driver.dart';
+import 'package:is_unix_socket_user_check/is_unix_socket_user_check.dart';
 
 Future<void> main() async {
   final env = Platform.environment;
@@ -30,6 +31,9 @@ Future<void> main() async {
       env[name] ?? _fail('$name is not set'),
   ];
   final uid = _uidOf(caller) ?? _fail('no user $caller');
+  final user =
+      UserId.parse(uid) ??
+      _fail('$caller is uid $uid, which the kernel uses for no one user');
   if (!Directory(root).existsSync()) _fail('no folder $root');
   final maxBytes = switch (env['FILE_DRIVER_MAX_BYTES']) {
     null => FileDriver.defaultMaxBytes,
@@ -42,7 +46,7 @@ Future<void> main() async {
   try {
     driver = await FileDriver.start(
       root: Directory(root),
-      caller: uid,
+      caller: user,
       socket: File(socket),
       maxBytes: maxBytes,
     );
