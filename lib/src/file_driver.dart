@@ -240,7 +240,7 @@ final class FileDriver {
 
 /// The user on the other end of [socket], as the kernel reports it: Linux's
 /// `SO_PEERCRED`, macOS's `LOCAL_PEERCRED`. Null where neither is known.
-/// The same as is_program_driver's service reads its own.
+/// The same as is_program_driver's `ProgramDriver` reads its own.
 int? _peerUid(Socket socket) {
   try {
     if (Platform.isLinux) {
