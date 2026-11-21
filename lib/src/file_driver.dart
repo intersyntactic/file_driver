@@ -5,7 +5,7 @@ import 'dart:typed_data';
 
 import 'package:is_effects/is_effects.dart';
 import 'package:is_path_confinement/is_path_confinement.dart';
-import 'package:is_peer_user_admission/is_peer_user_admission.dart';
+import 'package:is_unix_socket_user_check/is_unix_socket_user_check.dart';
 
 import 'request.dart';
 
@@ -30,7 +30,7 @@ final class FileDriver {
   FileDriver._(
     this.root,
     this.maxBytes,
-    this._admission,
+    this._socketUserCheck,
     this._socket,
     this._server,
   );
@@ -41,7 +41,7 @@ final class FileDriver {
   /// byte is recorded.
   final int maxBytes;
 
-  final PeerUserAdmission _admission;
+  final SocketUserCheck _socketUserCheck;
   final File _socket;
   final ServerSocket _server;
 
@@ -54,14 +54,14 @@ final class FileDriver {
   /// Listens on [socket] for the user [caller] alone, reading and writing
   /// under [root]. The socket is made readable and writable by its group,
   /// the suit's own, which is how the airlock's user reaches it; a socket
-  /// file nothing listens on is replaced. [reader] reads each peer's user
-  /// from the kernel, the running kernel's by default.
+  /// file nothing listens on is replaced. [socketUserReader] reads each
+  /// caller's user from the kernel, the running kernel's by default.
   static Future<FileDriver> start({
     required Directory root,
     required UserId caller,
     required File socket,
     int maxBytes = defaultMaxBytes,
-    PeerUserReader? reader,
+    SocketUserReader? socketUserReader,
   }) async {
     final server = await _bind(socket);
     final chmod = await Process.run('chmod', ['0660', socket.path]);
@@ -72,7 +72,7 @@ final class FileDriver {
     final driver = FileDriver._(
       root,
       maxBytes,
-      PeerUserAdmission.only(caller, reader: reader),
+      SocketUserCheck.only(caller, reader: socketUserReader),
       socket,
       server,
     );
@@ -102,7 +102,7 @@ final class FileDriver {
   }
 
   Future<void> _serve(Socket socket) async {
-    if (!_admission.admits(socket)) {
+    if (!_socketUserCheck.allows(socket)) {
       socket.destroy();
       return;
     }

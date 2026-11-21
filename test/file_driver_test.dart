@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'package:is_effects/is_effects.dart';
 import 'package:is_file_driver/is_file_driver.dart';
-import 'package:is_peer_user_admission/is_peer_user_admission.dart';
+import 'package:is_unix_socket_user_check/is_unix_socket_user_check.dart';
 import 'package:test/test.dart';
 
 final uid = int.parse((Process.runSync('id', ['-u']).stdout as String).trim());
@@ -350,7 +350,7 @@ void main() {
         root: root,
         caller: me,
         socket: other,
-        reader: PeerUserReader(kernel: Kernel.other),
+        socketUserReader: SocketUserReader(kernel: Kernel.other),
       );
       addTearDown(driver.close);
       await expectLater(

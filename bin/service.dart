@@ -18,7 +18,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:is_file_driver/is_file_driver.dart';
-import 'package:is_peer_user_admission/is_peer_user_admission.dart';
+import 'package:is_unix_socket_user_check/is_unix_socket_user_check.dart';
 
 Future<void> main() async {
   final env = Platform.environment;
