@@ -1,5 +1,4 @@
-/// Runs the file driver as a service (see
-/// `package:is_file_driver/service.dart`), as the suit a trajectory's agent
+/// Runs the file driver (see `FileDriver`), as the suit a trajectory's agent
 /// wears:
 ///
 ///     FILE_DRIVER_SOCKET=/run/file/suit-3/driver.sock \
@@ -19,7 +18,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:is_file_driver/is_file_driver.dart';
-import 'package:is_file_driver/service.dart';
 
 Future<void> main() async {
   final env = Platform.environment;
@@ -34,21 +32,19 @@ Future<void> main() async {
   final uid = _uidOf(caller) ?? _fail('no user $caller');
   if (!Directory(root).existsSync()) _fail('no folder $root');
   final maxBytes = switch (env['FILE_DRIVER_MAX_BYTES']) {
-    null => TreeFileDriver.defaultMaxBytes,
+    null => FileDriver.defaultMaxBytes,
     final raw => switch (int.tryParse(raw)) {
       final bytes? when bytes > 0 => bytes,
       _ => _fail('FILE_DRIVER_MAX_BYTES: not a number of bytes ($raw)'),
     },
   };
-  final FileDriverService service;
+  final FileDriver driver;
   try {
-    service = await FileDriverService.start(
-      TreeFileDriver(Directory(root), maxBytes: maxBytes),
-      uid,
-      File(socket),
-      // JSON escapes a character in at most six bytes, so a write the
-      // driver would take always fits.
-      maxRequest: 6 * maxBytes + 4096,
+    driver = await FileDriver.start(
+      root: Directory(root),
+      caller: uid,
+      socket: File(socket),
+      maxBytes: maxBytes,
     );
   } on Object catch (e) {
     _fail('$e');
@@ -63,7 +59,7 @@ Future<void> main() async {
     });
   }
   await stop.future;
-  await service.close();
+  await driver.close();
   exit(0);
 }
 
