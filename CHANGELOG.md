@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0
+
+- Requires is_effects `^0.13.0`, so a package depending on is_file_driver
+  moves with it. Nothing in `ReadsAndWritesFiles` changed.
+
 ## 0.1.0
 
 - `FileDriver`: a service on a Unix socket, answering only its caller's
