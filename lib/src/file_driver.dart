@@ -7,13 +7,11 @@ import 'package:is_effects/is_effects.dart';
 import 'package:is_path_confinement/is_path_confinement.dart';
 import 'package:is_unix_socket_user_check/is_unix_socket_user_check.dart';
 
-import 'request.dart';
-
 /// The file driver: a service on a Unix socket that reads and writes files
 /// under its root, the suit's home, for the airlock's user alone.
 ///
-/// A caller connects, sends one request (a [ReadRequest], [ReadBytesRequest]
-/// or [WriteRequest]) as JSON and closes its side; the driver carries it out
+/// A caller connects, sends one [FileRequest] as JSON ([encodeFileRequest])
+/// and closes its side; the driver carries it out
 /// and answers one line, the [Outcome] (see [encodeOutcome]), and closes.
 /// Who is calling is read from the socket as the kernel reports it, never
 /// from the request.
@@ -130,20 +128,20 @@ final class FileDriver {
   Future<Object?> _answer(Uint8List bytes) async {
     final FileRequest request;
     try {
-      request = FileRequest.fromJson(jsonDecode(utf8.decode(bytes)));
+      request = decodeFileRequest(jsonDecode(utf8.decode(bytes)));
     } on FormatException catch (e) {
       return _refusal('not a file request: ${e.message}');
     }
     return switch (request) {
-      ReadRequest(:final path) => encodeOutcome(
+      ReadFileRequest(:final path) => encodeOutcome(
         await _read(path),
         encodeReadResult,
       ),
-      ReadBytesRequest(:final path) => encodeOutcome(
+      ReadFileBytesRequest(:final path) => encodeOutcome(
         await _readBytes(path),
         encodeBytesReadResult,
       ),
-      WriteRequest(:final file) => encodeOutcome(
+      WriteFileRequest(:final file) => encodeOutcome(
         await _write(file),
         encodeWrote,
       ),

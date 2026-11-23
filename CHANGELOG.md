@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0
+
+- Requires is_effects `^0.14.1`, whose `FileRequest` and
+  `encodeFileRequest` / `decodeFileRequest` replace this package's own
+  request codec, so the airlock's caller and the driver share one. The wire
+  is unchanged.
+
 ## 0.3.0
 
 - `FileDriverSocket` and `OutcomeUnknown` are gone: the airlock holds its
