@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0
+
+- `FileDriverSocket` and `OutcomeUnknown` are gone: the airlock holds its
+  own caller of the socket. The wire is unchanged.
+
 ## 0.2.0
 
 - Requires is_effects `^0.13.0`, so a package depending on is_file_driver
