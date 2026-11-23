@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.1
+
+- Requires is_effects `^0.14.2`, so its lock matches the other builds
+  deployed beside it. Nothing else changed.
+
 ## 0.5.0
 
 - `write` is atomic: the text goes to a new file in a fresh folder beside
