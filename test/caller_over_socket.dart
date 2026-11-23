@@ -2,10 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:is_effects/is_effects.dart';
-import 'package:is_file_driver/src/request.dart';
 
 /// The caller's side of the socket, as the airlock holds its own: one
-/// request in JSON, then one answer line. An answer that never comes is
+/// request in is_effects' JSON, then one answer line. An answer that never comes is
 /// [Refused] here; the tests that look for one read the socket themselves.
 final class CallerOverSocket implements ReadsAndWritesFiles {
   CallerOverSocket(this.socket);
@@ -14,15 +13,15 @@ final class CallerOverSocket implements ReadsAndWritesFiles {
 
   @override
   Future<Outcome<ReadResult>> read(RelativePath path) =>
-      _ask(ReadRequest(path), decodeReadResult);
+      _ask(ReadFileRequest(path), decodeReadResult);
 
   @override
   Future<Outcome<BytesReadResult>> readBytes(RelativePath path) =>
-      _ask(ReadBytesRequest(path), decodeBytesReadResult);
+      _ask(ReadFileBytesRequest(path), decodeBytesReadResult);
 
   @override
   Future<Outcome<Wrote>> write(FileText file) =>
-      _ask(WriteRequest(file), decodeWrote);
+      _ask(WriteFileRequest(file), decodeWrote);
 
   Future<Outcome<O>> _ask<O>(
     FileRequest request,
@@ -32,7 +31,7 @@ final class CallerOverSocket implements ReadsAndWritesFiles {
       InternetAddress(socket.path, type: InternetAddressType.unix),
       0,
     );
-    s.add(utf8.encode(jsonEncode(request.toJson())));
+    s.add(utf8.encode(jsonEncode(encodeFileRequest(request))));
     await s.close();
     final answer = await utf8.decoder.bind(s).join();
     if (answer.isEmpty) return const Refused('no answer');
