@@ -9,7 +9,10 @@ suit a trajectory's agent wears.
   included. A file that isn't UTF-8 is `Refused`, never decoded loosely.
 - `readBytes` returns the file's exact bytes.
 - `write` writes the text as UTF-8, creating the folders it is in, and says
-  whether it replaced a file.
+  whether it replaced a file. It writes a new file beside the old one and
+  renames it over, so a reader sees the whole old file or the whole new
+  one. The new file keeps the old one's permissions, a link inside the tree
+  is written through and kept, and a file the suit cannot write is refused.
 - A file holding more than the cap (`FILE_DRIVER_MAX_BYTES`, 8 MiB unless
   set) is `Refused`, and so is a text that large: every byte is recorded.
 
