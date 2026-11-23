@@ -1,7 +1,8 @@
 # is_file_driver
 
-intersyntactic's `ReadsAndWritesFiles` (from [is_effects](https://github.com/intersyntactic/effects)):
-it reads and writes the files the airlock has decided, under the home of the
+intersyntactic's file driver: the service behind the airlock's
+`ReadsAndWritesFiles` (from [is_effects](https://github.com/intersyntactic/effects)).
+It reads and writes the files the airlock has decided, under the home of the
 suit a trajectory's agent wears.
 
 - `read` returns the file's exact text, line endings and byte order mark
@@ -37,7 +38,8 @@ is_effects:
   `{"kind": "write", "file": encodeFileText(...)}`, and closes its side;
 - `FileDriver` answers one line, `encodeOutcome` of the result, and closes.
 
-`FileDriverSocket` is that caller, the airlock's side of the socket.
+The airlock holds its own caller; this package has none, so nothing the
+airlock runs depends on it.
 
 ## Running it
 

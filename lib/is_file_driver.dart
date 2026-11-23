@@ -3,4 +3,3 @@
 library;
 
 export 'src/file_driver.dart';
-export 'src/file_driver_socket.dart';

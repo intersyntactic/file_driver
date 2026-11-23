@@ -7,6 +7,8 @@ import 'package:is_file_driver/is_file_driver.dart';
 import 'package:is_unix_socket_user_check/is_unix_socket_user_check.dart';
 import 'package:test/test.dart';
 
+import 'caller_over_socket.dart';
+
 final uid = int.parse((Process.runSync('id', ['-u']).stdout as String).trim());
 final me = UserId.parse(uid)!;
 
@@ -15,7 +17,7 @@ void main() {
   late Directory root;
   late Directory outside;
   late File socket;
-  late FileDriverSocket files;
+  late CallerOverSocket files;
 
   setUp(() async {
     // A Unix socket's path is short on macOS, so not under the test's own
@@ -32,7 +34,7 @@ void main() {
       maxBytes: 64,
     );
     addTearDown(driver.close);
-    files = FileDriverSocket(socket);
+    files = CallerOverSocket(socket);
   });
   tearDown(() => base.deleteSync(recursive: true));
 
@@ -293,15 +295,23 @@ void main() {
   );
 
   group('the socket', () {
-    Future<String> raw(String request) async {
+    /// What the driver at [at] answers [request]; empty when it hangs up,
+    /// which it can do before the request is even sent.
+    Future<String> raw(String request, [File? at]) async {
       final s = await Socket.connect(
-        InternetAddress(socket.path, type: InternetAddressType.unix),
+        InternetAddress((at ?? socket).path, type: InternetAddressType.unix),
         0,
       );
-      s.add(utf8.encode(request));
-      await s.close();
-      return utf8.decoder.bind(s).join();
+      try {
+        s.add(utf8.encode(request));
+        await s.close();
+        return await utf8.decoder.bind(s).join();
+      } on SocketException {
+        return '';
+      }
     }
+
+    const write = '{"kind":"write","file":{"path":"a","text":"x"}}';
 
     test('answers one line, the outcome', () async {
       expect(
@@ -334,13 +344,7 @@ void main() {
         socket: other,
       );
       addTearDown(driver.close);
-      // From the caller's side a hang-up after the request is sent is a
-      // write whose outcome never came back, which it cannot tell from a
-      // refusal.
-      await expectLater(
-        FileDriverSocket(other).write(FileText(RelativePath('a'), 'x')),
-        throwsA(isA<OutcomeUnknown>()),
-      );
+      expect(await raw(write, other), isEmpty);
       expect(File('${root.path}/a').existsSync(), isFalse);
     });
 
@@ -353,17 +357,8 @@ void main() {
         socketUserReader: SocketUserReader(kernel: Kernel.other),
       );
       addTearDown(driver.close);
-      await expectLater(
-        FileDriverSocket(other).write(FileText(RelativePath('a'), 'x')),
-        throwsA(isA<OutcomeUnknown>()),
-      );
+      expect(await raw(write, other), isEmpty);
       expect(File('${root.path}/a').existsSync(), isFalse);
-    });
-
-    test('is refused when no driver is listening', () async {
-      final out = await FileDriverSocket(File('${base.path}/none'))
-          .read(RelativePath('a'));
-      expect(out, isA<Refused>());
     });
 
     test('is readable and writable by owner and group only', () async {
