@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.5.0
+
+- `write` is atomic: the text goes to a new file in a fresh folder beside
+  the target, which is renamed over it, so a reader or a crash sees the
+  whole old file or the whole new one, never a part.
+- The new file takes the replaced file's permission bits (through libc
+  `chmod`, which dart:io lacks), so a private file stays private and a
+  script stays executable.
+- A link inside the tree is written through to its file and kept, not
+  replaced by a file.
+- A file the suit cannot write is still refused, though a rename alone
+  would replace it.
+- A hard link to the replaced file keeps the old text: the rename gives the
+  path a new file.
+
 ## 0.4.0
 
 - Requires is_effects `^0.14.1`, whose `FileRequest` and

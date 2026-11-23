@@ -278,6 +278,59 @@ void main() {
         'dir is a folder',
       );
     });
+
+    test('replaces the file whole: one open on the old file reads the old '
+        'text after', () async {
+      final old = File('${root.path}/a')..writeAsStringSync('old text');
+      final opened = old.openSync();
+      addTearDown(opened.closeSync);
+      await files.write(FileText(RelativePath('a'), 'new'));
+      expect(utf8.decode(opened.readSync(100)), 'old text');
+      expect(old.readAsStringSync(), 'new');
+    });
+
+    test('leaves nothing beside the file', () async {
+      await files.write(FileText(RelativePath('d/a'), 'one'));
+      await files.write(FileText(RelativePath('d/a'), 'two'));
+      expect(Directory('${root.path}/d').listSync().map((e) => e.path), [
+        '${root.path}/d/a',
+      ]);
+    });
+
+    for (final mode in ['600', '755', '640']) {
+      test('keeps the permissions of the file it replaces: $mode', () async {
+        final f = File('${root.path}/p')..writeAsStringSync('x');
+        Process.runSync('chmod', [mode, f.path]);
+        await files.write(FileText(RelativePath('p'), 'y'));
+        expect(f.readAsStringSync(), 'y');
+        expect((f.statSync().mode & 0x1FF).toRadixString(8), mode);
+      });
+    }
+
+    test(
+      'refuses a file the suit cannot write, and leaves it as it was',
+      () async {
+        final f = File('${root.path}/ro')..writeAsStringSync('kept');
+        Process.runSync('chmod', ['444', f.path]);
+        addTearDown(() => Process.runSync('chmod', ['644', f.path]));
+        expect(
+          refusal(await files.write(FileText(RelativePath('ro'), 'x'))),
+          startsWith('ro: '),
+        );
+        expect(f.readAsStringSync(), 'kept');
+        expect(root.listSync().map((e) => e.path), [f.path]);
+      },
+      // Root can write any file, so there is nothing to refuse.
+      skip: uid == 0,
+    );
+
+    test('writes through a link inside the tree, keeping the link', () async {
+      File('${root.path}/real.txt').writeAsStringSync('old');
+      Link('${root.path}/alias.txt').createSync('${root.path}/real.txt');
+      await files.write(FileText(RelativePath('alias.txt'), 'new'));
+      expect(FileSystemEntity.isLinkSync('${root.path}/alias.txt'), isTrue);
+      expect(File('${root.path}/real.txt').readAsStringSync(), 'new');
+    });
   });
 
   test(

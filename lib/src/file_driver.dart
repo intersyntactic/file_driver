@@ -7,6 +7,8 @@ import 'package:is_effects/is_effects.dart';
 import 'package:is_path_confinement/is_path_confinement.dart';
 import 'package:is_unix_socket_user_check/is_unix_socket_user_check.dart';
 
+import 'chmod.dart';
+
 /// The file driver: a service on a Unix socket that reads and writes files
 /// under its root, the suit's home, for the airlock's user alone.
 ///
@@ -207,22 +209,49 @@ final class FileDriver {
   }
 
   /// Writes [FileText.text] as UTF-8, creating the folders it is in.
+  ///
+  /// The text goes to a new file beside the old one, which is then renamed
+  /// over it, so a reader sees the whole old file or the whole new one,
+  /// never a part. The new file takes the old one's permissions, a link
+  /// inside the tree is written through rather than replaced, and a file
+  /// the suit cannot write is refused as before.
   Future<Outcome<Wrote>> _write(FileText file) async {
     final path = file.path;
-    final target = _resolve(path);
-    if (target == null) return Refused(_outside(path));
-    if (_isFolder(target)) return Refused('$path is a folder');
+    final resolved = _resolve(path);
+    if (resolved == null) return Refused(_outside(path));
+    if (_isFolder(resolved)) return Refused('$path is a folder');
     final bytes = utf8.encode(file.text);
     if (bytes.length > maxBytes) {
       return Refused('the text for $path is larger than $maxBytes bytes');
     }
+    Directory? scratch;
     try {
-      final replaced = await target.exists();
+      final replaced = await resolved.exists();
+      final target = replaced
+          ? File(await resolved.resolveSymbolicLinks())
+          : resolved;
+      int? mode;
+      if (replaced) {
+        // Opening to append changes nothing, and fails as the write would
+        // have on a file the suit cannot write.
+        await (await target.open(mode: FileMode.append)).close();
+        mode = (await target.stat()).mode & 0xFFF;
+      }
       await target.parent.create(recursive: true);
-      await target.writeAsBytes(bytes, flush: true);
+      // A folder of its own, made with a name no other file has, beside the
+      // target so the rename stays on one filesystem.
+      scratch = await target.parent.createTemp('.file-driver-');
+      final next = File('${scratch.path}/next');
+      await next.writeAsBytes(bytes, flush: true);
+      if (mode != null && !chmod(next.path, mode)) {
+        return Refused('$path: could not keep its permissions');
+      }
+      await next.rename(target.path);
       return Ran(Wrote(replaced: replaced));
     } on FileSystemException catch (e) {
       return Refused(_failed(path, e));
+    } finally {
+      await scratch?.delete(recursive: true);
     }
   }
 
