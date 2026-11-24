@@ -13,7 +13,7 @@ dependencies:
   ffi: ^2.2.0
   is_effects: ^0.14.2
   is_path_confinement: ^0.1.0
-  is_unix_socket_user_check: ^0.2.0
+  is_unix_socket_user_check: ^0.2.1
 
 dev_dependencies:
   lints: ^6.1.0
