@@ -213,7 +213,7 @@ final class FileDriver {
   /// The text goes to a new file beside the old one, which is then renamed
   /// over it, so a reader sees the whole old file or the whole new one,
   /// never a part. The new file takes the old one's permissions, a link
-  /// inside the tree is written through rather than replaced, and a file
+  /// inside the root is written through rather than replaced, and a file
   /// the suit cannot write is refused as before.
   Future<Outcome<Wrote>> _write(FileText file) async {
     final path = file.path;
@@ -267,7 +267,7 @@ final class FileDriver {
   static bool _isFolder(File file) =>
       FileSystemEntity.typeSync(file.path) == FileSystemEntityType.directory;
 
-  static String _outside(RelativePath path) => '$path is outside the tree';
+  static String _outside(RelativePath path) => '$path is outside the root';
 
   static String _failed(RelativePath path, FileSystemException e) =>
       '$path: ${e.osError?.message ?? e.message}';

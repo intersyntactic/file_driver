@@ -11,7 +11,7 @@ suit a trajectory's agent wears.
 - `write` writes the text as UTF-8, creating the folders it is in, and says
   whether it replaced a file. It writes a new file beside the old one and
   renames it over, so a reader sees the whole old file or the whole new
-  one. The new file keeps the old one's permissions, a link inside the tree
+  one. The new file keeps the old one's permissions, a link inside the root
   is written through and kept, and a file the suit cannot write is refused.
 - A file holding more than the cap (`FILE_DRIVER_MAX_BYTES`, 8 MiB unless
   set) is `Refused`, and so is a text that large: every byte is recorded.
@@ -23,13 +23,13 @@ a suit (`suit-N`). That user is the wall: a read or write can reach what the
 suit can and no more. Each driver answers only the airlock's user, read from
 the socket as the kernel reports it, never from the request.
 
-The airlock refuses a path whose text leaves the tree. This driver refuses
+The airlock refuses a path whose text leaves the root. This driver refuses
 one that leaves it through a symlink, at the moment it reads or writes, by
 resolving the path to a real one with `isInsideTree` from
 [is_path_confinement](https://pub.dev/packages/is_path_confinement). That
 check guards against mistakes; it is not the wall. A link can be swapped
 between the check and the open, which is why one driver runs per suit as
-that suit, and not one privileged driver for every tree.
+that suit, and not one privileged driver for every suit.
 
 ## The wire
 

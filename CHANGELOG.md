@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.3
+
+- A path that leaves the root is refused as "<path> is outside the root".
+- `tool/corpus_check.dart` reads every file under some folders through a
+  driver on its socket, checks the text or refusal against the bytes on
+  disk, writes each text back and checks the bytes match and nothing is
+  left beside them.
+
 ## 0.5.2
 
 - Locks is_effects 0.14.3, so it matches the other builds deployed beside

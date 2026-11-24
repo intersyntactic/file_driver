@@ -2,7 +2,7 @@ name: is_file_driver
 description: >-
   intersyntactic's file driver: reads and writes the files the airlock has
   decided, as the suit a trajectory's agent wears, in that suit's home.
-version: 0.5.2
+version: 0.5.3
 repository: https://github.com/intersyntactic/file_driver
 publish_to: none
 
