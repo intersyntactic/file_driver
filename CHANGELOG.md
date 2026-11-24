@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.6.0
+
+Breaking: the wire's `{"kind": "refused"}` is gone, so deploy this only with
+an airlock on is_effects 0.15.0.
+
+- Requires is_effects `^0.15.0`, where `Outcome` splits on whether the world
+  changed. Every read failure, and every write refused before it touches the
+  disk, is `NothingRan` (`{"kind": "nothingRan", "why": ...}`).
+- A write that fails after making the folders it is in removes them again,
+  deepest first and only while empty, so it can answer `NothingRan`. One it
+  can't remove makes it `StoppedPartway` with `done` null, naming the
+  folders left behind.
+- A write's scratch folder that can't be removed no longer escapes as an
+  error: after a write that landed it is logged to stderr and the write is
+  still `Ran`; after one that failed, it is named in a `StoppedPartway`.
+- `FileDriver.start` takes `writeFileBytes`, what puts a write's bytes in
+  its new file, so a test can make the disk fail.
+
 ## 0.5.3
 
 - Requires is_unix_socket_user_check `^0.2.1`. A caller the driver refuses

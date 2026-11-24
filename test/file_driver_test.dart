@@ -55,9 +55,10 @@ void main() {
         final other => fail('$path: $other'),
       };
 
-  String refusal(Outcome<Object?> outcome) => switch (outcome) {
-    Refused(:final why) => why,
+  String nothingRan(Outcome<Object?> outcome) => switch (outcome) {
+    NothingRan(:final why) => why,
     Ran(:final output) => fail('ran: $output'),
+    StoppedPartway(:final why) => fail('stopped partway: $why'),
   };
 
   /// Checking the check is not checking the write: these assert what is on
@@ -73,9 +74,9 @@ void main() {
     ]) {
       test('"$rel" is refused, and nothing outside is touched', () async {
         final before = outsideTheRoot();
-        refusal(await files.write(FileText(RelativePath(rel), 'PWNED')));
-        refusal(await files.read(RelativePath(rel)));
-        refusal(await files.readBytes(RelativePath(rel)));
+        nothingRan(await files.write(FileText(RelativePath(rel), 'PWNED')));
+        nothingRan(await files.read(RelativePath(rel)));
+        nothingRan(await files.readBytes(RelativePath(rel)));
         expect(outsideTheRoot(), before);
       });
     }
@@ -95,31 +96,33 @@ void main() {
     test('a link to a folder outside: read and write refused', () async {
       Link('${root.path}/out').createSync(outside.path);
       final before = outsideTheRoot();
-      final why = refusal(await files.read(RelativePath('out/case.txt')));
+      final why = nothingRan(await files.read(RelativePath('out/case.txt')));
       expect(why, 'out/case.txt is outside the root');
-      refusal(await files.readBytes(RelativePath('out/case.txt')));
-      refusal(await files.write(FileText(RelativePath('out/case.txt'), 'x')));
-      refusal(await files.write(FileText(RelativePath('out/new/x'), 'x')));
+      nothingRan(await files.readBytes(RelativePath('out/case.txt')));
+      nothingRan(
+        await files.write(FileText(RelativePath('out/case.txt'), 'x')),
+      );
+      nothingRan(await files.write(FileText(RelativePath('out/new/x'), 'x')));
       expect(outsideTheRoot(), before);
     });
 
     test('a link to a file outside: read and write refused', () async {
       Link('${root.path}/notes.txt').createSync('${outside.path}/case.txt');
       final before = outsideTheRoot();
-      refusal(await files.read(RelativePath('notes.txt')));
-      refusal(await files.write(FileText(RelativePath('notes.txt'), 'x')));
+      nothingRan(await files.read(RelativePath('notes.txt')));
+      nothingRan(await files.write(FileText(RelativePath('notes.txt'), 'x')));
       expect(outsideTheRoot(), before);
     });
 
     test('a dangling link outward: the write does not create it', () async {
       Link('${root.path}/plant').createSync('${outside.path}/planted.txt');
-      refusal(await files.write(FileText(RelativePath('plant'), 'x')));
+      nothingRan(await files.write(FileText(RelativePath('plant'), 'x')));
       expect(File('${outside.path}/planted.txt').existsSync(), isFalse);
     });
 
     test('a relative link that climbs out is refused', () async {
       Link('${root.path}/up').createSync('../other');
-      refusal(await files.read(RelativePath('up/case.txt')));
+      nothingRan(await files.read(RelativePath('up/case.txt')));
     });
 
     test('a link that stays inside is followed', () async {
@@ -170,7 +173,10 @@ void main() {
     ]) {
       test('refuses what is not UTF-8: $name', () async {
         File('${root.path}/f').writeAsBytesSync(bytes);
-        expect(refusal(await files.read(RelativePath('f'))), contains('UTF-8'));
+        expect(
+          nothingRan(await files.read(RelativePath('f'))),
+          contains('UTF-8'),
+        );
       });
     }
 
@@ -191,7 +197,7 @@ void main() {
     test('refuses a file that is not UTF-8, naming it', () async {
       File('${root.path}/bin.dat').writeAsBytesSync([0x50, 0x4b, 0xff, 0xfe]);
       expect(
-        refusal(await files.read(RelativePath('bin.dat'))),
+        nothingRan(await files.read(RelativePath('bin.dat'))),
         'bin.dat is not UTF-8 text',
       );
     });
@@ -202,7 +208,7 @@ void main() {
     });
 
     test('refuses a folder', () async {
-      expect(refusal(await files.read(RelativePath.root)), ' is a folder');
+      expect(nothingRan(await files.read(RelativePath.root)), ' is a folder');
     });
   });
 
@@ -226,20 +232,20 @@ void main() {
       File('${root.path}/over').writeAsStringSync('x' * 65);
       expect(await readText('at'), 'x' * 64);
       expect(
-        refusal(await files.readBytes(RelativePath('over'))),
+        nothingRan(await files.readBytes(RelativePath('over'))),
         'over is larger than 64 bytes',
       );
-      refusal(await files.read(RelativePath('over')));
+      nothingRan(await files.read(RelativePath('over')));
     });
 
     test('a text over the cap is not written, in part or at all', () async {
-      refusal(await files.write(FileText(RelativePath('big'), 'x' * 65)));
+      nothingRan(await files.write(FileText(RelativePath('big'), 'x' * 65)));
       expect(File('${root.path}/big').existsSync(), isFalse);
     });
 
     test('counts bytes, not characters', () async {
       // 22 four-byte characters are 88 bytes.
-      final why = refusal(
+      final why = nothingRan(
         await files.write(FileText(RelativePath('e'), '\u{1F600}' * 22)),
       );
       expect(why, contains('larger than 64 bytes'));
@@ -247,7 +253,7 @@ void main() {
 
     test('a request too large to be a write is refused unread', () async {
       final out = await files.write(FileText(RelativePath('a'), 'x' * 5000));
-      expect(refusal(out), 'request too large');
+      expect(nothingRan(out), 'request too large');
       expect(File('${root.path}/a').existsSync(), isFalse);
     });
   });
@@ -274,7 +280,7 @@ void main() {
     test('refuses a folder', () async {
       Directory('${root.path}/dir').createSync();
       expect(
-        refusal(await files.write(FileText(RelativePath('dir'), 'x'))),
+        nothingRan(await files.write(FileText(RelativePath('dir'), 'x'))),
         'dir is a folder',
       );
     });
@@ -314,7 +320,7 @@ void main() {
         Process.runSync('chmod', ['444', f.path]);
         addTearDown(() => Process.runSync('chmod', ['644', f.path]));
         expect(
-          refusal(await files.write(FileText(RelativePath('ro'), 'x'))),
+          nothingRan(await files.write(FileText(RelativePath('ro'), 'x'))),
           startsWith('ro: '),
         );
         expect(f.readAsStringSync(), 'kept');
@@ -339,13 +345,79 @@ void main() {
       final locked = File('${root.path}/locked.txt')..writeAsStringSync('x');
       Process.runSync('chmod', ['000', locked.path]);
       addTearDown(() => Process.runSync('chmod', ['600', locked.path]));
-      final why = refusal(await files.read(RelativePath('locked.txt')));
+      final why = nothingRan(await files.read(RelativePath('locked.txt')));
       expect(why, startsWith('locked.txt: '));
       expect(why, isNot(contains('UTF-8')));
     },
     // Root can open any file, so there is nothing to refuse.
     skip: uid == 0,
   );
+
+  group('a write that fails after making its folders', () {
+    /// A caller of a driver whose writes fail at the disk, the way a full
+    /// one does, after [before] has run.
+    Future<CallerOverSocket> failingDisk({void Function()? before}) async {
+      final other = File('${base.path}/w');
+      final driver = await FileDriver.start(
+        root: root,
+        caller: me,
+        socket: other,
+        writeFileBytes: (file, bytes) async {
+          before?.call();
+          throw const FileSystemException('No space left on device');
+        },
+      );
+      addTearDown(driver.close);
+      return CallerOverSocket(other);
+    }
+
+    test('removes the folders it made, so nothing ran', () async {
+      final failing = await failingDisk();
+      final why = nothingRan(
+        await failing.write(FileText(RelativePath('new/deep/x.txt'), 'x')),
+      );
+      expect(why, 'new/deep/x.txt: No space left on device');
+      expect(root.listSync(), isEmpty);
+    });
+
+    test('keeps the folders that were there before', () async {
+      Directory('${root.path}/kept').createSync();
+      final failing = await failingDisk();
+      nothingRan(
+        await failing.write(FileText(RelativePath('kept/new/x.txt'), 'x')),
+      );
+      expect(root.listSync(recursive: true).map((e) => e.path), [
+        '${root.path}/kept',
+      ]);
+    });
+
+    test('leaves a file it would have replaced as it was', () async {
+      File('${root.path}/a.txt').writeAsStringSync('old');
+      final failing = await failingDisk();
+      nothingRan(await failing.write(FileText(RelativePath('a.txt'), 'new')));
+      expect(File('${root.path}/a.txt').readAsStringSync(), 'old');
+      expect(root.listSync().map((e) => e.path), ['${root.path}/a.txt']);
+    });
+
+    test('stopped partway when a folder it made is no longer empty', () async {
+      final failing = await failingDisk(
+        before: () =>
+            File('${root.path}/new/other.txt').writeAsStringSync('theirs'),
+      );
+      switch (await failing.write(FileText(RelativePath('new/x.txt'), 'x'))) {
+        case StoppedPartway(:final why, :final done):
+          expect(
+            why,
+            'new/x.txt: No space left on device; it left behind new, '
+            'which it could not remove',
+          );
+          expect(done, isNull);
+        case final other:
+          fail('$other');
+      }
+      expect(File('${root.path}/new/other.txt').readAsStringSync(), 'theirs');
+    });
+  });
 
   group('the socket', () {
     /// What the driver at [at] answers [request]; empty when it hangs up,
@@ -384,7 +456,7 @@ void main() {
           jsonDecode(await raw(request)),
           (_, field) => throw FormatException(field),
         );
-        expect((outcome as Refused).why, startsWith('not a file request'));
+        expect(nothingRan(outcome), startsWith('not a file request'));
       }
       expect(root.listSync(), isEmpty);
     });
