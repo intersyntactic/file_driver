@@ -63,7 +63,7 @@ void main() {
   /// Checking the check is not checking the write: these assert what is on
   /// the disk after the write, since a check can be right about a path and
   /// creating its folders can still change the disk it reasoned about.
-  group('a path that leaves the tree by its text', () {
+  group('a path that leaves the root by its text', () {
     for (final rel in const [
       'q1/../../victim.txt',
       'q2/./../../victim.txt',
@@ -91,12 +91,12 @@ void main() {
     });
   });
 
-  group('a path that leaves the tree through a symlink', () {
+  group('a path that leaves the root through a symlink', () {
     test('a link to a folder outside: read and write refused', () async {
       Link('${root.path}/out').createSync(outside.path);
       final before = outsideTheRoot();
       final why = refusal(await files.read(RelativePath('out/case.txt')));
-      expect(why, 'out/case.txt is outside the tree');
+      expect(why, 'out/case.txt is outside the root');
       refusal(await files.readBytes(RelativePath('out/case.txt')));
       refusal(await files.write(FileText(RelativePath('out/case.txt'), 'x')));
       refusal(await files.write(FileText(RelativePath('out/new/x'), 'x')));
@@ -324,7 +324,7 @@ void main() {
       skip: uid == 0,
     );
 
-    test('writes through a link inside the tree, keeping the link', () async {
+    test('writes through a link inside the root, keeping the link', () async {
       File('${root.path}/real.txt').writeAsStringSync('old');
       Link('${root.path}/alias.txt').createSync('${root.path}/real.txt');
       await files.write(FileText(RelativePath('alias.txt'), 'new'));
