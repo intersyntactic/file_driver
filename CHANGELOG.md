@@ -2,8 +2,9 @@
 
 ## 0.6.0
 
-Breaking: the wire's `{"kind": "refused"}` is gone, so deploy this only with
-an airlock on is_effects 0.15.0.
+Breaking: the wire's `{"kind": "refused"}` is gone, so deploy this only
+after the airlock is on is_effects 0.15.0. An older airlock can't read
+`nothingRan`; a 0.15.0 airlock still reads an older driver's `refused`.
 
 - Requires is_effects `^0.15.0`, where `Outcome` splits on whether the world
   changed. Every read failure, and every write refused before it touches the
