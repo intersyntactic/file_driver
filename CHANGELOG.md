@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.2
+
+- Locks is_effects 0.14.3, so it matches the other builds deployed beside
+  it. Nothing else changed.
+
 ## 0.5.1
 
 - Requires is_effects `^0.14.2`, so its lock matches the other builds
