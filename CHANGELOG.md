@@ -2,6 +2,9 @@
 
 ## 0.5.3
 
+- Requires is_unix_socket_user_check `^0.2.0`. A caller the driver refuses
+  is logged to stderr with the reason (not the allowed user, or a user that
+  couldn't be read); before, the socket closed without a word.
 - A path that leaves the root is refused as "<path> is outside the root".
 - `tool/corpus_check.dart` reads every file under some folders through a
   driver on its socket, checks the text or refusal against the bytes on

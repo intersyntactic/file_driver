@@ -102,9 +102,15 @@ final class FileDriver {
   }
 
   Future<void> _serve(Socket socket) async {
-    if (!_socketUserCheck.allows(socket)) {
-      socket.destroy();
-      return;
+    final verdict = _socketUserCheck.decide(socket);
+    switch (verdict) {
+      case Allowed():
+        break;
+      case NotAllowed():
+      case Unread():
+        stderr.writeln('is_file_driver: refused a caller, $verdict');
+        socket.destroy();
+        return;
     }
     try {
       final request = BytesBuilder(copy: false);
