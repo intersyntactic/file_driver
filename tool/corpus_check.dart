@@ -37,8 +37,8 @@ Future<void> main(List<String> args) async {
       'read as text',
       '  of which start with a BOM',
       '  of which contain CR',
-      'refused as not UTF-8',
-      'refused: other',
+      'nothing ran: not UTF-8',
+      'nothing ran: other',
     ])
       k: 0,
   };
@@ -83,8 +83,10 @@ Future<void> main(List<String> args) async {
               final back = File('${scratch.path}/${out.value}')
                   .readAsBytesSync();
               if (!_same(back, disk)) failures.add('round trip: $rel');
-            case Refused(:final why):
-              failures.add('write refused ($why): $rel');
+            case NothingRan(:final why):
+              failures.add('write: nothing ran ($why): $rel');
+            case StoppedPartway(:final why):
+              failures.add('write: stopped partway ($why): $rel');
           }
           final left = scratch.listSync().map((e) => e.path).toList();
           if (left.length > 1) failures.add('left behind: $left');
@@ -93,21 +95,25 @@ Future<void> main(List<String> args) async {
           }
         case Ran(output: ReadMissing()):
           failures.add('missing: $rel');
-        case Refused(:final why):
+        case NothingRan(:final why):
           if (why.endsWith('is not UTF-8 text')) {
-            count('refused as not UTF-8');
-            if (strictUtf8) failures.add('refused but UTF-8: $rel');
+            count('nothing ran: not UTF-8');
+            if (strictUtf8) failures.add('not UTF-8 but is: $rel');
           } else {
-            count('refused: other');
+            count('nothing ran: other');
           }
+        case StoppedPartway(:final why):
+          failures.add('read: stopped partway ($why): $rel');
       }
       switch (await reader.readBytes(rel)) {
         case Ran(output: ReadBytes(:final bytes)):
           if (!_same(bytes, disk)) failures.add('readBytes: $rel');
         case Ran(output: ReadMissing()):
           failures.add('readBytes missing: $rel');
-        case Refused(:final why):
-          failures.add('readBytes refused ($why): $rel');
+        case NothingRan(:final why):
+          failures.add('readBytes: nothing ran ($why): $rel');
+        case StoppedPartway(:final why):
+          failures.add('readBytes: stopped partway ($why): $rel');
       }
     }
     await readerDriver.close();

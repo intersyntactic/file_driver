@@ -20,7 +20,7 @@ import 'chmod.dart';
 ///
 /// It runs as the suit, so a read or write can reach what that suit can and
 /// no more: that is the wall. A path that leaves the root, by its text or
-/// through a symlink, is also [Refused] at the moment of reading or writing,
+/// through a symlink, is also [NothingRan] at the moment of reading or writing,
 /// but that guards against mistakes only, since a link can be swapped between
 /// the check and the open.
 ///
@@ -33,6 +33,7 @@ final class FileDriver {
     this._socketUserCheck,
     this._socket,
     this._server,
+    this._writeFileBytes,
   );
 
   final Directory root;
@@ -44,6 +45,7 @@ final class FileDriver {
   final SocketUserCheck _socketUserCheck;
   final File _socket;
   final ServerSocket _server;
+  final Future<void> Function(File file, List<int> bytes) _writeFileBytes;
 
   static const defaultMaxBytes = 8 << 20;
 
@@ -56,12 +58,15 @@ final class FileDriver {
   /// the suit's own, which is how the airlock's user reaches it; a socket
   /// file nothing listens on is replaced. [socketUserReader] reads each
   /// caller's user from the kernel, the running kernel's by default.
+  /// [writeFileBytes] puts a write's bytes in its new file, flushed to disk
+  /// by default.
   static Future<FileDriver> start({
     required Directory root,
     required UserId caller,
     required File socket,
     int maxBytes = defaultMaxBytes,
     SocketUserReader? socketUserReader,
+    Future<void> Function(File file, List<int> bytes)? writeFileBytes,
   }) async {
     final server = await _bind(socket);
     final chmod = await Process.run('chmod', ['0660', socket.path]);
@@ -75,6 +80,7 @@ final class FileDriver {
       SocketUserCheck.only(caller, reader: socketUserReader),
       socket,
       server,
+      writeFileBytes ?? (file, bytes) => file.writeAsBytes(bytes, flush: true),
     );
     driver._server.listen(driver._serve);
     return driver;
@@ -123,7 +129,7 @@ final class FileDriver {
         request.add(chunk);
       }
       final answer = tooLarge
-          ? _refusal('request too large')
+          ? _nothingRan('request too large')
           : await _answer(request.takeBytes());
       socket.add(utf8.encode('${jsonEncode(answer)}\n'));
       await socket.close();
@@ -138,7 +144,7 @@ final class FileDriver {
     try {
       request = decodeFileRequest(jsonDecode(utf8.decode(bytes)));
     } on FormatException catch (e) {
-      return _refusal('not a file request: ${e.message}');
+      return _nothingRan('not a file request: ${e.message}');
     }
     return switch (request) {
       ReadFileRequest(:final path) => encodeOutcome(
@@ -156,16 +162,17 @@ final class FileDriver {
     };
   }
 
-  static Object? _refusal(String why) =>
-      encodeOutcome<Never>(Refused(why), (output) => output);
+  static Object? _nothingRan(String why) =>
+      encodeOutcome<Never>(NothingRan(why), (output) => output);
 
-  /// The file's exact text, line endings and all; [Refused] when it is not
-  /// UTF-8, never decoded loosely.
+  /// The file's exact text, line endings and all; [NothingRan] when it is
+  /// not UTF-8, never decoded loosely.
   Future<Outcome<ReadResult>> _read(RelativePath path) async =>
       switch (await _readBytes(path)) {
         Ran(output: ReadBytes(:final bytes)) => _decode(path, bytes),
         Ran(output: ReadMissing()) => const Ran(ReadMissing()),
-        Refused(:final why) => Refused(why),
+        NothingRan(:final why) => NothingRan(why),
+        StoppedPartway(:final why) => StoppedPartway(why: why, done: null),
       };
 
   /// Keeps a leading byte order mark, which `utf8.decode` drops, so a read
@@ -180,15 +187,16 @@ final class FileDriver {
       final text = utf8.decode(bytes);
       return Ran(ReadText(bom ? '${String.fromCharCode(0xFEFF)}$text' : text));
     } on FormatException {
-      return Refused('$path is not UTF-8 text');
+      return NothingRan('$path is not UTF-8 text');
     }
   }
 
-  /// The file's exact bytes; [Refused] when it holds more than [maxBytes].
+  /// The file's exact bytes; [NothingRan] when it holds more than
+  /// [maxBytes]. A read changes nothing, so every failure is [NothingRan].
   Future<Outcome<BytesReadResult>> _readBytes(RelativePath path) async {
     final file = _resolve(path);
-    if (file == null) return Refused(_outside(path));
-    if (_isFolder(file)) return Refused('$path is a folder');
+    if (file == null) return NothingRan(_outside(path));
+    if (_isFolder(file)) return NothingRan('$path is a folder');
     try {
       final opened = await file.open();
       try {
@@ -201,7 +209,7 @@ final class FileDriver {
           bytes.add(chunk);
         }
         if (bytes.length > maxBytes) {
-          return Refused('$path is larger than $maxBytes bytes');
+          return NothingRan('$path is larger than $maxBytes bytes');
         }
         return Ran(ReadBytes(bytes.takeBytes()));
       } finally {
@@ -210,7 +218,7 @@ final class FileDriver {
     } on PathNotFoundException {
       return const Ran(ReadMissing());
     } on FileSystemException catch (e) {
-      return Refused(_failed(path, e));
+      return NothingRan(_failed(path, e));
     }
   }
 
@@ -220,16 +228,20 @@ final class FileDriver {
   /// over it, so a reader sees the whole old file or the whole new one,
   /// never a part. The new file takes the old one's permissions, a link
   /// inside the root is written through rather than replaced, and a file
-  /// the suit cannot write is refused as before.
+  /// the suit cannot write is [NothingRan].
+  ///
+  /// A write that fails removes the folders it made, so it can answer
+  /// [NothingRan]; one it could not remove makes it [StoppedPartway].
   Future<Outcome<Wrote>> _write(FileText file) async {
     final path = file.path;
     final resolved = _resolve(path);
-    if (resolved == null) return Refused(_outside(path));
-    if (_isFolder(resolved)) return Refused('$path is a folder');
+    if (resolved == null) return NothingRan(_outside(path));
+    if (_isFolder(resolved)) return NothingRan('$path is a folder');
     final bytes = utf8.encode(file.text);
     if (bytes.length > maxBytes) {
-      return Refused('the text for $path is larger than $maxBytes bytes');
+      return NothingRan('the text for $path is larger than $maxBytes bytes');
     }
+    var made = const <Directory>[];
     Directory? scratch;
     try {
       final replaced = await resolved.exists();
@@ -243,22 +255,82 @@ final class FileDriver {
         await (await target.open(mode: FileMode.append)).close();
         mode = (await target.stat()).mode & 0xFFF;
       }
+      made = await _missingFolders(target.parent);
       await target.parent.create(recursive: true);
       // A folder of its own, made with a name no other file has, beside the
       // target so the rename stays on one filesystem.
       scratch = await target.parent.createTemp('.file-driver-');
       final next = File('${scratch.path}/next');
-      await next.writeAsBytes(bytes, flush: true);
+      await _writeFileBytes(next, bytes);
       if (mode != null && !chmod(next.path, mode)) {
-        return Refused('$path: could not keep its permissions');
+        throw FileSystemException('could not keep its permissions');
       }
       await next.rename(target.path);
+      await _removeScratch(scratch);
       return Ran(Wrote(replaced: replaced));
     } on FileSystemException catch (e) {
-      return Refused(_failed(path, e));
-    } finally {
-      await scratch?.delete(recursive: true);
+      final left = [
+        if (!await _removeScratch(scratch)) scratch!,
+        ...await _removeEmpty(made),
+      ];
+      final why = _failed(path, e);
+      if (left.isEmpty) return NothingRan(why);
+      final shown = left.map((folder) => _shown(folder)).join(', ');
+      return StoppedPartway(
+        why: '$why; it left behind $shown, which it could not remove',
+        done: null,
+      );
     }
+  }
+
+  /// [folder] and each folder above it that doesn't exist yet, deepest
+  /// first: the ones creating [folder] will make.
+  static Future<List<Directory>> _missingFolders(Directory folder) async {
+    final missing = <Directory>[];
+    for (var d = folder; !await d.exists(); d = d.parent) {
+      missing.add(d);
+    }
+    return missing;
+  }
+
+  /// Removes each of [folders], deepest first, only while it is empty, so
+  /// nothing another write put there goes; the ones still there.
+  static Future<List<Directory>> _removeEmpty(List<Directory> folders) async {
+    final left = <Directory>[];
+    for (final folder in folders) {
+      try {
+        await folder.delete();
+      } on PathNotFoundException {
+        // Never made, so nothing is left.
+      } on FileSystemException {
+        left.add(folder);
+      }
+    }
+    return left;
+  }
+
+  /// Removes a write's [scratch] folder and what is in it; false when it
+  /// is still there.
+  static Future<bool> _removeScratch(Directory? scratch) async {
+    if (scratch == null) return true;
+    try {
+      await scratch.delete(recursive: true);
+      return true;
+    } on FileSystemException catch (e) {
+      stderr.writeln(
+        'is_file_driver: could not remove ${scratch.path}: '
+        '${e.osError?.message ?? e.message}',
+      );
+      return false;
+    }
+  }
+
+  /// [folder]'s path under [root], or its whole path when it isn't there.
+  String _shown(Directory folder) {
+    final prefix = '${root.absolute.path}/';
+    return folder.path.startsWith(prefix)
+        ? folder.path.substring(prefix.length)
+        : folder.path;
   }
 
   /// [path] under [root], or null when it resolves outside it. Both sides
