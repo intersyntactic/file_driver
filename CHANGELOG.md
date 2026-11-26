@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.1
+
+- Requires is_effects `^0.17.0`. Nothing on the wire changes from 0.6.0:
+  0.16.0 stopped re-exporting other vocabularies (file_driver used none of
+  them) and 0.17.0 removed two reply interfaces it never implemented. A
+  0.6.0 or 0.6.1 driver and an airlock on 0.15.0 to 0.17.0 read each other
+  the same, so this deploys in any window.
+
 ## 0.6.0
 
 Breaking: the wire's `{"kind": "refused"}` is gone, so deploy this only
