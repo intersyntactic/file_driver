@@ -6,7 +6,8 @@
   0.16.0 stopped re-exporting other vocabularies (file_driver used none of
   them) and 0.17.0 removed two reply interfaces it never implemented. A
   0.6.0 or 0.6.1 driver and an airlock on 0.15.0 to 0.17.0 read each other
-  the same, so this deploys in any window.
+  the same. The 0.6.0 rule still holds: deploy only where the airlock is on
+  is_effects 0.15.0 or later.
 
 ## 0.6.0
 
