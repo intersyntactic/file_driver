@@ -83,6 +83,40 @@ since the grant names its trajectory. No loop receives it: agent_loop
 subscribes only to the kinds it names, which `file-request-granted` is not,
 and the feed sends only the kinds asked for.
 
+## In the airlock: a grant is its own path
+
+Today `Trajectory._consider` decides, runs the action through
+`carriedOutBy`, and always writes the result, in one call that the service
+loop awaits, one entry at a time. A file grant cannot go through that path:
+
+- `_consider` writes a result whatever `carriedOutBy` returns, so the
+  decision's chain would also get an outcome the airlock made up, beside
+  the feed's real one;
+- waiting inside `_consider` for the feed's outcome would hold up every
+  other trajectory's proposals until the file action finished, or forever
+  if no driver is connected.
+
+So an allowed file action is a case of its own, not a program behind
+`CarriesOutEachProgram.carriedOutBy`. It writes the decision, then the
+grant extending it, and returns. It writes no result. The loop learns the
+outcome from the logbook, through loop-launcher, as it does today.
+
+Two things that path owes:
+
+- **A grant counts as answered.** On start, the airlock rebuilds which
+  proposals are already answered from every `outcome-of-proposed-action`'s
+  `proposed` (`airlock_subscriber.dart`, the `answered` set). It must read
+  each `file-request-granted`'s `proposed` too. Otherwise a restart between
+  the grant and the feed's outcome decides the proposal again and writes a
+  second grant, and the write may run twice. If the airlock restarts
+  between the decision and the grant, it decides again and writes a second
+  decision. That costs one extra line for a person to read, and only one
+  grant is ever written.
+- **`_decisionHash` is cleared by the grant.** Only `writeResult` removes
+  an entry from that map today. The grant path takes the decision's id from
+  it and removes it, so a decision that never gets a result does not stay
+  in memory.
+
 ## Who may answer: the unit is the identity
 
 Two walls, both set up by systemd, so neither depends on the agent
@@ -131,9 +165,9 @@ an action and recording it.
 
 ## What each repo builds
 
-- **airlock**: a `file-request-granted` writer for allowed file actions,
-  and no outcome for them. The sender table gives `file-request-granted`
-  to `airlock` only.
+- **airlock**: the grant path above: its own case beside `_consider`,
+  grants counted as answered, `_decisionHash` cleared by the grant. The
+  sender table gives `file-request-granted` to `airlock` only.
 - **file grant feed** (new repo): the program above. Its routing is
   loop-launcher's `TrajectoryRouter` and `LoopFeeds` again, keyed by suit
   instead of loop user. The rule for which entries belong to which
