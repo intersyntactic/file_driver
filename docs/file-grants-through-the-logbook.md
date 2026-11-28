@@ -70,7 +70,18 @@ grant, and only once.
    with `previous` set to the grant, so the outcome extends the grant's
    chain. The logbook's tip check makes this once only: a second outcome
    for the same grant names a `previous` that is no longer the tip, and is
-   refused. loop-launcher routes the outcome to the loop as it does today.
+   refused. Its body is exactly `outcomeOfProposedActionToJson(proposed,
+   result)`, with `proposed` copied from the grant, so it names the loop's
+   own proposal, never the grant. loop-launcher's `TrajectoryRouter` routes
+   an outcome by that body alone (it never reads `previous`), and a body
+   with any other key is one `readOutcomeOfProposedAction` refuses and no
+   loop receives. agent_loop matches the outcome to its waiting proposal by
+   the same id.
+
+loop-launcher routes the grant itself to the trajectory's loop feed too,
+since the grant names its trajectory. No loop receives it: agent_loop
+subscribes only to the kinds it names, which `file-request-granted` is not,
+and the feed sends only the kinds asked for.
 
 ## Who may answer: the unit is the identity
 
@@ -124,8 +135,13 @@ an action and recording it.
   and no outcome for them. The sender table gives `file-request-granted`
   to `airlock` only.
 - **file grant feed** (new repo): the program above. Its routing is
-  loop-launcher's `LoopFeeds` and `TrajectoryRouter` again, keyed by suit;
-  whether to share that code or copy its shape is that session's call.
+  loop-launcher's `TrajectoryRouter` and `LoopFeeds` again, keyed by suit
+  instead of loop user. The rule for which entries belong to which
+  trajectory lives in one place, so it is shared, not copied: a small
+  package holding `TrajectoryRouter` and a socket feed per key, which
+  loop_launcher and the file grant feed both depend on. loop_launcher
+  itself never holds the right to write outcomes. Taking that package out
+  of loop_launcher is a loop_launcher change, which needs Nick's yes.
 - **file_driver**: connects to `FILE_DRIVER_FEED` instead of listening on
   `FILE_DRIVER_SOCKET`; the caller check moves to the feed's side. The
   request and answer encodings do not change.
