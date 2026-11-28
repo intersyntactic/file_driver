@@ -1,7 +1,7 @@
 # is_file_driver
 
 intersyntactic's file driver: the service behind the airlock's
-`ReadsAndWritesFiles` (from [is_effects](https://github.com/intersyntactic/effects)).
+`ReadsAndWritesFiles` (from [is_file_request_vocabulary](https://pub.dev/packages/is_file_request_vocabulary)).
 It reads and writes the files the airlock has decided, under the home of the
 suit a trajectory's agent wears.
 
@@ -38,7 +38,7 @@ that suit, and not one privileged driver for every suit.
 ## The wire
 
 One connection per request, one JSON value each way, with the codecs from
-is_effects:
+is_file_request_vocabulary and is_outcome_vocabulary:
 
 - the caller sends one of `{"kind": "read", "path": ...}`,
   `{"kind": "readBytes", "path": ...}` or

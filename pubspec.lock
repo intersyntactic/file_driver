@@ -41,14 +41,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.2"
-  checked_json:
-    dependency: transitive
-    description:
-      name: checked_json
-      sha256: "6e98ee4c293ee7ed5d1a76411823c7b43aee1fa969b63cb896c519814dbdcfbf"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.2.1"
   cli_config:
     dependency: transitive
     description:
@@ -153,22 +145,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.0"
-  is_effects:
+  is_file_request_vocabulary:
     dependency: "direct main"
     description:
-      name: is_effects
-      sha256: "2d1014ac6b36a7658910a0278b573277fe3cac4be0533e597734bd89c908727a"
+      name: is_file_request_vocabulary
+      sha256: d82812a3a85ce2383ce2e0492291d18bbb243a63c8d04f517ab3ef02ce907450
       url: "https://pub.dev"
     source: hosted
-    version: "0.17.0"
-  is_model_vocabulary:
-    dependency: transitive
+    version: "0.1.0"
+  is_outcome_vocabulary:
+    dependency: "direct main"
     description:
-      name: is_model_vocabulary
-      sha256: "48927abc9d91422f92e370dc8a7698a2ee29c4bfa44712f5e88c9ab126185e57"
+      name: is_outcome_vocabulary
+      sha256: ddf762c8201ec6422a12ad10fd591015d875a31a718da54279203147e2e7e199
       url: "https://pub.dev"
     source: hosted
-    version: "0.2.0"
+    version: "0.1.0"
   is_path_confinement:
     dependency: "direct main"
     description:
@@ -177,11 +169,11 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.1.0"
-  is_sign_in_vocabulary:
-    dependency: transitive
+  is_relative_path_vocabulary:
+    dependency: "direct main"
     description:
-      name: is_sign_in_vocabulary
-      sha256: dfffa15f57f7fb076e89aca0d27e33def3b2786efa730ee0c6cbca5473aefb15
+      name: is_relative_path_vocabulary
+      sha256: "242009776bf731980901cf2c34b15b5ca9170a24a15d45a3dfb1f49ed3daa275"
       url: "https://pub.dev"
     source: hosted
     version: "0.1.0"
@@ -193,14 +185,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.2.1"
-  is_web_address_vocabulary:
-    dependency: transitive
-    description:
-      name: is_web_address_vocabulary
-      sha256: "232241a06a2871213e110f52f01c8c68b6c98fdcdf00fcfb491c8e24d10d8dac"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.1.1"
   lints:
     dependency: "direct dev"
     description:

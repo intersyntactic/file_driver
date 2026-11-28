@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.2
+
+- Depends on the vocabularies is_effects was split into, in place of
+  is_effects: is_outcome_vocabulary, is_relative_path_vocabulary and
+  is_file_request_vocabulary, each `^0.1.0`. Nothing on the wire changes:
+  every key and kind the file and outcome codecs write is the same as in
+  is_effects 0.17.0. The 0.6.0 rule still holds: deploy only where the
+  airlock is on is_effects 0.15.0 or later, or on these vocabularies.
+
 ## 0.6.1
 
 - Requires is_effects `^0.17.0`. Nothing on the wire changes from 0.6.0:
