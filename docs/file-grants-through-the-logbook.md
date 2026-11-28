@@ -152,9 +152,18 @@ an action and recording it.
   grant.
 - **logbook**: nothing.
 
+## Checked on the box
+
+- enspyr-syd runs Linux 6.17, so the feed can use `SO_PEERPIDFD`.
+- A read-only `/run` does not stop `connect()` to a socket already there: a
+  transient unit with program-open@'s sandbox connected to a listener
+  under `/run`. A process running as suit-N passes the permission check on
+  a `suit-N` `0660` socket, so the only thing stopping it is the listener
+  checking who the caller is. That is why the feed must check the caller's
+  unit, and why its folder must also be hidden.
+
 ## To check on the box before building
 
-- The kernel's version, for `SO_PEERPIDFD`.
 - That `InaccessiblePaths=` on a program unit hides the feed folder from a
   program it starts, and that `ProtectControlGroups=true` is on in every
   unit that runs as a suit.
