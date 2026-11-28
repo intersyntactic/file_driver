@@ -8,8 +8,10 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:is_effects/is_effects.dart';
 import 'package:is_file_driver/is_file_driver.dart';
+import 'package:is_file_request_vocabulary/is_file_request_vocabulary.dart';
+import 'package:is_outcome_vocabulary/is_outcome_vocabulary.dart';
+import 'package:is_relative_path_vocabulary/is_relative_path_vocabulary.dart';
 import 'package:is_unix_socket_user_check/is_unix_socket_user_check.dart';
 
 import '../test/caller_over_socket.dart';

@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:is_effects/is_effects.dart';
+import 'package:is_file_request_vocabulary/is_file_request_vocabulary.dart';
+import 'package:is_outcome_vocabulary/is_outcome_vocabulary.dart';
+import 'package:is_relative_path_vocabulary/is_relative_path_vocabulary.dart';
 
 /// The caller's side of the socket, as the airlock holds its own: one
-/// request in is_effects' JSON, then one answer line. An answer that never
+/// request in the vocabularies' JSON, then one answer line. An answer that never
 /// comes is [StoppedPartway], since the caller can't know what ran; the tests
 /// that look for one read the socket themselves.
 final class CallerOverSocket implements ReadsAndWritesFiles {

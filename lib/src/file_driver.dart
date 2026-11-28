@@ -3,8 +3,10 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:is_effects/is_effects.dart';
+import 'package:is_file_request_vocabulary/is_file_request_vocabulary.dart';
+import 'package:is_outcome_vocabulary/is_outcome_vocabulary.dart';
 import 'package:is_path_confinement/is_path_confinement.dart';
+import 'package:is_relative_path_vocabulary/is_relative_path_vocabulary.dart';
 import 'package:is_unix_socket_user_check/is_unix_socket_user_check.dart';
 
 import 'chmod.dart';
